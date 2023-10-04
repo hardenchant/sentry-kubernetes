@@ -2,10 +2,10 @@ import argparse
 import logging
 import os
 import time
+
+import sentry_sdk
 from kubernetes import client, config, watch
 from kubernetes.client.rest import ApiException
-from raven import breadcrumbs, Client as SentryClient
-from raven.transport.threaded_requests import ThreadedRequestsHTTPTransport
 from urllib3.exceptions import ProtocolError
 
 SDK_VALUE = {"name": "sentry-kubernetes", "version": "1.0.0"}
@@ -81,16 +81,20 @@ def watch_loop():
     w = watch.Watch()
 
     logging.info("Initializing Sentry client")
-    sentry = SentryClient(
+
+    sentry_options = {
+        'ca_certs': os.getenv('REQUESTS_CA_BUNDLE', None),
+        'dsn': DSN,
+        'transport_queue_size': sentry_sdk.consts.DEFAULT_QUEUE_SIZE,
+        'http_proxy': None,
+        'https_proxy': None,
+        'proxy_headers': None
+    }
+    sentry_sdk.init(
         dsn=DSN,
-        install_sys_hook=False,
-        install_logging_hook=False,
-        include_versions=False,
-        capture_locals=False,
-        context={},
+        max_breadcrumbs=50,
         environment=ENV,
-        release=RELEASE,
-        transport=ThreadedRequestsHTTPTransport,
+        transport=sentry_sdk.transport.HttpTransport(sentry_options),
     )
 
     # try:
@@ -205,15 +209,12 @@ def watch_loop():
 
             logging.debug("Sending event to Sentry:\n{}".format(data))
 
-            sentry.captureMessage(
+            sentry_sdk.capture_message(
                 message,
-                # culprit=culprit,
-                data=data,
-                date=creation_timestamp,
-                extra=meta,
+                extras=meta,
                 fingerprint=fingerprint,
                 level=level,
-                tags=tags,
+                tags=tags
             )
 
         data = {}
@@ -222,7 +223,7 @@ def watch_loop():
         if namespace:
             data["namespace"] = namespace
 
-        breadcrumbs.record(
+        sentry_sdk.add_breadcrumb(
             data=data,
             level=level,
             message=message,
