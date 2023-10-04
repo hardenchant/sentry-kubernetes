@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels: {{ include "sentry-kubernetes.labels" . | indent 4 }}
+  name: {{ template "sentry-kubernetes.fullname" . }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ template "sentry-kubernetes.name" . }}
+  template:
+    metadata:
+      annotations:
+        checksum/secrets: {{ include (print .Template.BasePath "/secret.yaml") . | sha256sum }}
+        checksum/configmaps: {{ include (print .Template.BasePath "/configmap.yaml") . | sha256sum }}
+      labels:
+        app: {{ template "sentry-kubernetes.name" . }}
+        release: {{.Release.Name }}
+    spec:
+      {{- if .Values.volumes }}
+      volumes:
+        {{- toYaml .Values.volumes | nindent 8 }}
+      {{- end }}
+
+      {{- if .Values.priorityClassName }}
+      priorityClassName: "{{ .Values.priorityClassName }}"
+      {{- end }}
+
+      imagePullSecrets:
+        {{- toYaml .Values.image.pullSecrets | nindent 8}}
+
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+        {{- if .Values.volumeMounts }}
+        volumeMounts:
+          {{- toYaml .Values.volumeMounts | nindent 10 }}
+        {{- end }}
+
+        envFrom:
+          - configMapRef:
+              name: {{ template "sentry-kubernetes.fullname" . }}
+          - secretRef:
+              name: {{ template "sentry-kubernetes.fullname" . }}
+
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+
+      {{- if .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.nodeSelector | indent 8 }}
+      {{- end }}
+
+      {{- if .Values.tolerations }}
+      tolerations:
+        {{- toYaml .Values.tolerations | indent 8 }}
+      {{- end }}
+
+      serviceAccountName: {{ template "sentry-kubernetes.serviceAccountName" . }}
