@@ -1,52 +1,26 @@
 sentry-kubernetes
 =================
 
-**Disclaimer: this project is not officially maintained by Sentry.**
+## Description
+This is a fork of abandoned repo with some additionals to work properly.
 
-The code is under the `getsentry` GitHub organization because it was created by a former employee.  
-For more information see [issue #42](https://github.com/getsentry/sentry-kubernetes/issues/42).
+You can check all new vars at [values.yaml](charts/sentry-kubernetes/values.yaml)
 
----
+Tested on Kubernetes v1.24.6 + Sentry 22.6.0 (e68da5c)
 
-Errors and warnings in Kubernetes often go unnoticed by operators. Even when they are checked they are hard to read and understand in the context of what else is going on in the cluster. `sentry-kubernetes` is a small container you launch inside your Kubernetes cluster that will send errors and warnings to Sentry where they will be cleanly presented and intelligently grouped. Typical Sentry features such as notifications can then be used to help operation and developer visibility.
+All python requirements not freezes at my implementation and can be broken.
 
-Create a new project on [Sentry](http://sentry.io/) and use your DSN when launching the `sentry-kubernetes` container:
 
-    kubectl run sentry-kubernetes \
-      --image getsentry/sentry-kubernetes \
-      --env="DSN=$YOUR_DSN"
+## Installation
+```yaml
+docker build --platform=linux/amd64 -f Dockerfile -t registry.local:5000/sentry-kubernetes:$(cat VERSION) -t registry.local:5000/sentry-kubernetes:latest .
+docker push registry.local:5000/sentry-kubernetes:$(cat VERSION)
+docker push registry.local:5000/sentry-kubernetes:latest
 
-#### Filters and options
+# create ns which you want and
+# drop values.yaml with corrected values, than
+helm install -n sentry-kubernetes -f values.yaml appname ./charts/sentry-kubernetes/
 
-See the full list in sentry-kubernetes.py
-
-| ENV var | Description |
----------|-------------
-EVENT_NAMESPACES_EXCLUDED | A comma-separated list of namespaces. Ex.: 'qa,demo'. Events from these namespaces won't be sent to Sentry.
-
----
-
-Events are grouped in Sentry:
-
-![1](/1.png)
-
----
-
-They come with useful tags for filtering, and breadcrumbs showing events that occurred prior to the warning/error:
-
-![2](/2.png)
-
----
-
-And include all of the extra data attached to the event:
-
-![3](/3.png)
-
-## Install using helm charts
-
-```console
-$ helm repo add incubator https://kubernetes-charts-incubator.storage.googleapis.com/
-"incubator" has been added to your repositories
-
-$ helm install incubator/sentry-kubernetes --name my-release --set sentry.dsn=<your-dsn>
+# than upgrade this if you need change some vars
+helm upgrade -n sentry-kubernetes -f values.yaml appname ./charts/sentry-kubernetes/
 ```
