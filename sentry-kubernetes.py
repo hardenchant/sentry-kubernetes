@@ -1,15 +1,12 @@
-from kubernetes import client, config, watch
-from kubernetes.client.rest import ApiException
-from raven import breadcrumbs
-from raven import Client as SentryClient
-from raven.transport.threaded_requests import ThreadedRequestsHTTPTransport
-from urllib3.exceptions import ProtocolError
-
 import argparse
 import logging
 import os
 import time
-
+from kubernetes import client, config, watch
+from kubernetes.client.rest import ApiException
+from raven import breadcrumbs, Client as SentryClient
+from raven.transport.threaded_requests import ThreadedRequestsHTTPTransport
+from urllib3.exceptions import ProtocolError
 
 SDK_VALUE = {"name": "sentry-kubernetes", "version": "1.0.0"}
 
